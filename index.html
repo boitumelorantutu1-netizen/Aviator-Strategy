@@ -1,0 +1,697 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skhipha'ndas Aviator Strategyy</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter & Orbitron) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0B0E14',
+                        cardDark: '#151922',
+                        cardBorder: '#232936',
+                        aviatorPink: '#E91E63',
+                        aviatorPurple: '#9C27B0',
+                        aviatorGold: '#FFD700',
+                        aviatorGreen: '#00E676'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        digital: ['Orbitron', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B0E14;
+            color: #E2E8F0;
+        }
+        .glow-pink {
+            box-shadow: 0 0 15px rgba(233, 30, 99, 0.4);
+        }
+        .glow-green {
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.4);
+        }
+        .glow-gold {
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+        }
+        /* Pulsing animation for active bet window */
+        @keyframes betPulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.02); opacity: 0.85; }
+        }
+        .animate-bet-alert {
+            animation: betPulse 1s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased pb-12">
+
+    <!-- TOP HEADER -->
+    <header class="bg-cardDark border-b border-cardBorder sticky top-0 z-40 px-4 py-3 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-aviatorPink to-aviatorPurple flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid font-bold text-xl fa-plane-departure"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none text-white tracking-wide">Skhipha'ndas Aviator Strategy</h1></h1>
+                    <p class="text-xs text-slate-400 mt-1">Aviator Strategy Calculator (&ge;6.00x Rule)</p>
+                </div>
+            </div>
+
+            <!-- Header Floating Clock -->
+            <div class="bg-dark/80 px-4 py-2 rounded-xl border border-cardBorder flex items-center space-x-3">
+                <i class="fa-regular fa-clock text-aviatorGreen text-lg animate-pulse"></i>
+                <div class="text-right">
+                    <span class="text-xs uppercase text-slate-400 tracking-wider block leading-none">Floating Clock</span>
+                    <span id="liveClock" class="font-digital text-xl text-aviatorGreen font-bold tracking-widest">00:00:00</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto w-full px-4 pt-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: DUAL SIGNAL INPUT & CONTROLS (5 cols) -->
+        <div class="lg:col-span-5 space-y-6">
+
+            <!-- STRATEGY SUMMARY CARD (SETSWANA / ENGLISH) -->
+            <div class="bg-cardDark border border-cardBorder rounded-2xl p-5 shadow-lg">
+                <button onclick="toggleGuide()" class="w-full flex justify-between items-center text-left">
+                    <span class="font-bold text-sm text-aviatorGold flex items-center gap-2">
+                        <i class="fa-solid fa-book-open"></i> How Strategy Works (Melao ya Strategi)
+                    </span>
+                    <i id="guideChevron" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                </button>
+                <div id="strategyGuide" class="mt-4 text-xs text-slate-300 space-y-2 border-t border-cardBorder/60 pt-3 hidden">
+                    <p class="font-semibold text-white">1. Analysis Trigger (&ge; 6.00x):</p>
+                    <p class="text-slate-400">Re simolla analysis ga odds di le 6.00x, 10x, 20x, 40000x or above.</p>
+                    
+                    <p class="font-semibold text-white mt-2">2. Rounding Seconds Rule (> 34 sec):</p>
+                    <p class="text-slate-400">Ga di seconds di feta 34 (e.g. 18:44:35), re convert nako to next full minute (18:45:00).</p>
+
+                    <p class="font-semibold text-white mt-2">3. Dual Reference Signals (+5 Min):</p>
+                    <p class="text-slate-400">Add 5 minutes mo nakong nngwe le nngwe e e converted to get next entries. Tsena 10-20 seconds BEFORE target minute!</p>
+                </div>
+            </div>
+
+            <!-- DUAL ENTRY CALCULATOR FORM -->
+            <div class="bg-cardDark border border-cardBorder rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-aviatorPink/10 rounded-full blur-2xl"></div>
+
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-aviatorPink"></i> Calculate Dual Signals
+                </h2>
+
+                <form id="signalForm" onsubmit="calculateSignal(event)" class="space-y-5">
+                    
+                    <!-- REFERENCE 1 INPUT GROUP -->
+                    <div class="bg-dark/60 p-4 rounded-xl border border-aviatorPink/30 space-y-3 relative">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-aviatorPink uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-1"></i> Reference 1 Trigger
+                            </span>
+                            <button type="button" onclick="setCurrentTime(1)" class="text-[11px] text-aviatorGreen hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-location-crosshairs"></i> Current Time
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase text-slate-400 mb-1">Odds (&ge; 6.00x)</label>
+                                <div class="relative">
+                                    <input type="number" step="0.01" min="1" id="oddsInput1" placeholder="e.g. 7.50" required
+                                        class="w-full bg-dark border border-cardBorder rounded-lg px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-aviatorPink">
+                                    <span class="absolute right-2.5 top-2 text-slate-500 font-bold text-xs">X</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase text-slate-400 mb-1">Exact Time (HH:MM:SS)</label>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <input type="number" id="hoursInput1" min="0" max="23" placeholder="HH" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPink">
+                                    <input type="number" id="minsInput1" min="0" max="59" placeholder="MM" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPink">
+                                    <input type="number" id="secsInput1" min="0" max="59" placeholder="SS" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPink">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REFERENCE 2 INPUT GROUP -->
+                    <div class="bg-dark/60 p-4 rounded-xl border border-aviatorPurple/30 space-y-3 relative">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-aviatorPurple uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-2"></i> Reference 2 Trigger
+                            </span>
+                            <button type="button" onclick="setCurrentTime(2)" class="text-[11px] text-aviatorGreen hover:underline font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-location-crosshairs"></i> Current Time
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase text-slate-400 mb-1">Odds (&ge; 6.00x)</label>
+                                <div class="relative">
+                                    <input type="number" step="0.01" min="1" id="oddsInput2" placeholder="e.g. 12.80" required
+                                        class="w-full bg-dark border border-cardBorder rounded-lg px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-aviatorPurple">
+                                    <span class="absolute right-2.5 top-2 text-slate-500 font-bold text-xs">X</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase text-slate-400 mb-1">Exact Time (HH:MM:SS)</label>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <input type="number" id="hoursInput2" min="0" max="23" placeholder="HH" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPurple">
+                                    <input type="number" id="minsInput2" min="0" max="59" placeholder="MM" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPurple">
+                                    <input type="number" id="secsInput2" min="0" max="59" placeholder="SS" required
+                                        class="bg-dark border border-cardBorder rounded-lg px-1 py-2 text-center text-white font-bold text-xs focus:outline-none focus:border-aviatorPurple">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sequence Chain Length -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">
+                            Long Range Chain (+5 Min Steps per Reference)
+                        </label>
+                        <select id="chainCount" class="w-full bg-dark border border-cardBorder rounded-xl px-4 py-2.5 text-slate-200 focus:outline-none focus:border-aviatorPink text-sm">
+                            <option value="1">Single Signal per Ref (+5 mins)</option>
+                            <option value="3">3 Signals Sequence (+15 mins)</option>
+                            <option value="6" selected>6 Signals Sequence (+30 mins)</option>
+                            <option value="10">10 Signals Sequence (+50 mins)</option>
+                        </select>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="w-full bg-gradient-to-r from-aviatorPink to-aviatorPurple hover:opacity-95 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i> GENERATE DUAL SIGNALS
+                    </button>
+                </form>
+            </div>
+
+            <!-- BET TIMER ALERT BOX -->
+            <div id="activeAlertContainer" class="hidden bg-cardDark border border-cardBorder rounded-2xl p-5 shadow-xl transition-all">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Next Upcoming Signal</span>
+                    <span id="targetTimeBadge" class="bg-aviatorPurple/20 text-aviatorPink text-xs font-bold px-2.5 py-1 rounded-full border border-aviatorPink/30">Target: --:--</span>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <div id="alertTitle" class="text-sm font-bold text-slate-300">Countdown to Bet Entry Window</div>
+                    <div id="countdownTimer" class="my-2">
+                        <span id="countdownDisplay" class="font-digital text-4xl font-extrabold text-aviatorGold tracking-widest">00:00</span>
+                    </div>
+                    <p id="alertInstructions" class="text-xs text-slate-400">Place bets 10 to 20 seconds before signal minute!</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT COLUMN: RESULTS & LONG RANGE SEQUENCE (7 cols) -->
+        <div class="lg:col-span-7 space-y-6">
+
+            <!-- DUAL SIGNAL DISPLAY BREAKDOWN PANEL -->
+            <div id="resultPanel" class="bg-cardDark border border-cardBorder rounded-2xl p-6 shadow-xl relative">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-bullseye text-aviatorGreen"></i> Dual Signal Calculation Breakdown
+                </h2>
+
+                <div id="emptyState" class="text-center py-10 text-slate-500">
+                    <i class="fa-solid fa-chart-line text-4xl mb-3 opacity-40"></i>
+                    <p class="text-sm">No analysis logged yet. Input two reference multipliers &ge; 6.00x to generate predictions.</p>
+                </div>
+
+                <div id="resultContent" class="hidden space-y-4">
+                    <!-- Cards Grid for Ref 1 & Ref 2 -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Ref 1 Box -->
+                        <div class="bg-dark/60 p-4 rounded-xl border border-aviatorPink/40 space-y-2">
+                            <span class="text-xs font-bold text-aviatorPink uppercase tracking-wider flex items-center justify-between">
+                                <span>Ref 1 Primary Signal</span>
+                                <span id="resOdds1" class="text-sm bg-aviatorPink/20 px-2 py-0.5 rounded">--</span>
+                            </span>
+                            <div class="flex justify-between items-baseline pt-1">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Logged Time</span>
+                                    <span id="resLogged1" class="text-sm font-mono text-slate-200">--:--:--</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Rounded Base (>34s)</span>
+                                    <span id="resRounded1" class="text-sm font-mono text-aviatorGold">--:--:00</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-cardBorder/60 flex justify-between items-center">
+                                <span class="text-xs text-slate-300 font-semibold">Target (+5m):</span>
+                                <span id="resTarget1" class="font-digital text-2xl font-bold text-aviatorGreen">--:--</span>
+                            </div>
+                        </div>
+
+                        <!-- Ref 2 Box -->
+                        <div class="bg-dark/60 p-4 rounded-xl border border-aviatorPurple/40 space-y-2">
+                            <span class="text-xs font-bold text-aviatorPurple uppercase tracking-wider flex items-center justify-between">
+                                <span>Ref 2 Primary Signal</span>
+                                <span id="resOdds2" class="text-sm bg-aviatorPurple/20 px-2 py-0.5 rounded text-purple-300">--</span>
+                            </span>
+                            <div class="flex justify-between items-baseline pt-1">
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Logged Time</span>
+                                    <span id="resLogged2" class="text-sm font-mono text-slate-200">--:--:--</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-[10px] text-slate-400 block uppercase font-semibold">Rounded Base (>34s)</span>
+                                    <span id="resRounded2" class="text-sm font-mono text-aviatorGold">--:--:00</span>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-cardBorder/60 flex justify-between items-center">
+                                <span class="text-xs text-slate-300 font-semibold">Target (+5m):</span>
+                                <span id="resTarget2" class="font-digital text-2xl font-bold text-aviatorGreen">--:--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MERGED LONG RANGE SIGNAL CHAIN LIST -->
+            <div class="bg-cardDark border border-cardBorder rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-aviatorGold"></i> Merged Long-Range Signal Timeline
+                    </h2>
+                    <span id="sequenceBadge" class="text-xs bg-dark px-2.5 py-1 rounded-md text-slate-400 border border-cardBorder">0 Signals</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-cardBorder text-slate-400 text-xs uppercase">
+                                <th class="py-2.5 px-3">Ref Origin</th>
+                                <th class="py-2.5 px-3">Target Signal Minute</th>
+                                <th class="py-2.5 px-3">Place Bet At (10-20s prior)</th>
+                                <th class="py-2.5 px-3 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sequenceTableBody" class="divide-y divide-cardBorder/50 text-sm">
+                            <tr>
+                                <td colspan="4" class="py-6 text-center text-slate-500 text-xs">
+                                    No dual sequence generated yet.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LOG HISTORY TABLE -->
+            <div class="bg-cardDark border border-cardBorder rounded-2xl p-6 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-history text-slate-400"></i> Analysis History Log
+                    </h2>
+                    <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-300 transition-colors">
+                        Clear Log
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-cardBorder text-slate-400 text-xs uppercase">
+                                <th class="py-2.5 px-3">Ref</th>
+                                <th class="py-2.5 px-3">Odds</th>
+                                <th class="py-2.5 px-3">Raw Time</th>
+                                <th class="py-2.5 px-3">Rule (>34s)</th>
+                                <th class="py-2.5 px-3 text-right">Target (+5m)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-cardBorder/50 text-xs font-mono">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-8 text-center text-xs text-slate-500">
+        Aviator 5-Min Strategy Tool &copy; 2026. For educational & strategy tracking purposes.
+    </footer>
+
+    <!-- SOUND BEEP (Web Audio API fallback) -->
+    <script>
+        // State Management
+        let historyLog = [];
+        let activeTargets = [];
+        let audioCtx = null;
+
+        // Initialize Audio Context on user interaction
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playBeep(freq = 880, type = 'sine', duration = 0.15) {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                // Audio safe fallback
+            }
+        }
+
+        // Live Clock Loop
+        function updateLiveClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const clockEl = document.getElementById('liveClock');
+            if (clockEl) {
+                clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            checkBetAlerts(now);
+        }
+
+        setInterval(updateLiveClock, 1000);
+        updateLiveClock();
+
+        // Populate Current Time into inputs for Ref 1 or Ref 2
+        function setCurrentTime(refIndex) {
+            const now = new Date();
+            if (refIndex === 1) {
+                document.getElementById('hoursInput1').value = String(now.getHours()).padStart(2, '0');
+                document.getElementById('minsInput1').value = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('secsInput1').value = String(now.getSeconds()).padStart(2, '0');
+            } else if (refIndex === 2) {
+                document.getElementById('hoursInput2').value = String(now.getHours()).padStart(2, '0');
+                document.getElementById('minsInput2').value = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById('secsInput2').value = String(now.getSeconds()).padStart(2, '0');
+            } else {
+                setCurrentTime(1);
+                setCurrentTime(2);
+            }
+        }
+
+        // Process individual reference input
+        function processRef(oddsId, hId, mId, sId, chainCount, refTag) {
+            const odds = parseFloat(document.getElementById(oddsId).value);
+            const hh = parseInt(document.getElementById(hId).value, 10);
+            const mm = parseInt(document.getElementById(mId).value, 10);
+            const ss = parseInt(document.getElementById(sId).value, 10);
+
+            if (isNaN(odds) || isNaN(hh) || isNaN(mm) || isNaN(ss)) {
+                return null;
+            }
+
+            const rawDate = new Date();
+            rawDate.setHours(hh, mm, ss, 0);
+
+            // Apply >34s rounding rule
+            let roundedDate = new Date(rawDate.getTime());
+            if (ss > 34) {
+                roundedDate.setMinutes(roundedDate.getMinutes() + 1);
+                roundedDate.setSeconds(0, 0);
+            } else {
+                roundedDate.setSeconds(0, 0);
+            }
+
+            // Generate sequence (+5 min increments)
+            let sequence = [];
+            let currentStepDate = new Date(roundedDate.getTime());
+
+            for (let i = 1; i <= chainCount; i++) {
+                currentStepDate.setMinutes(currentStepDate.getMinutes() + 5);
+                const targetCopy = new Date(currentStepDate.getTime());
+                const windowStart = new Date(targetCopy.getTime() - 20000);
+                const windowEnd = new Date(targetCopy.getTime() - 10000);
+
+                sequence.push({
+                    step: i,
+                    ref: refTag,
+                    odds: odds,
+                    targetTime: new Date(targetCopy),
+                    windowStartStr: formatTimeWithSecs(windowStart),
+                    windowEndStr: formatTimeWithSecs(windowEnd)
+                });
+            }
+
+            return {
+                ref: refTag,
+                odds: odds,
+                rawDate: rawDate,
+                roundedDate: roundedDate,
+                sequence: sequence,
+                ruleApplied: ss > 34 ? `Round UP (>34s)` : `Direct (≤34s)`
+            };
+        }
+
+        // Strategy calculation core for Dual Inputs
+        function calculateSignal(e) {
+            e.preventDefault();
+            initAudio();
+
+            const chainCount = parseInt(document.getElementById('chainCount').value, 10);
+
+            const ref1 = processRef('oddsInput1', 'hoursInput1', 'minsInput1', 'secsInput1', chainCount, 'REF 1');
+            const ref2 = processRef('oddsInput2', 'hoursInput2', 'minsInput2', 'secsInput2', chainCount, 'REF 2');
+
+            if (!ref1 || !ref2) {
+                return;
+            }
+
+            if (ref1.odds < 6.0 || ref2.odds < 6.0) {
+                const proceed = confirm("Warning: One or both reference odds are under 6.00x! Do you still want to calculate?");
+                if (!proceed) return;
+            }
+
+            // Display Results for both references
+            displayDualResults(ref1, ref2);
+
+            // Merge sequences and sort chronologically
+            let mergedSequence = [...ref1.sequence, ...ref2.sequence];
+            mergedSequence.sort((a, b) => a.targetTime.getTime() - b.targetTime.getTime());
+
+            // Add to history log
+            historyLog.unshift({
+                ref: ref1.ref,
+                odds: ref1.odds,
+                rawTime: formatTimeWithSecs(ref1.rawDate),
+                ruleApplied: ref1.ruleApplied,
+                primaryTarget: formatTime(ref1.sequence[0].targetTime)
+            });
+
+            historyLog.unshift({
+                ref: ref2.ref,
+                odds: ref2.odds,
+                rawTime: formatTimeWithSecs(ref2.rawDate),
+                ruleApplied: ref2.ruleApplied,
+                primaryTarget: formatTime(ref2.sequence[0].targetTime)
+            });
+
+            activeTargets = mergedSequence;
+
+            renderHistory();
+            renderSequence(mergedSequence);
+        }
+
+        function formatTime(d) {
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            return `${h}:${m}`;
+        }
+
+        function formatTimeWithSecs(d) {
+            const h = String(d.getHours()).padStart(2, '0');
+            const m = String(d.getMinutes()).padStart(2, '0');
+            const s = String(d.getSeconds()).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function displayDualResults(ref1, ref2) {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultContent').classList.remove('hidden');
+
+            // Ref 1
+            document.getElementById('resOdds1').textContent = `${ref1.odds.toFixed(2)}x`;
+            document.getElementById('resLogged1').textContent = formatTimeWithSecs(ref1.rawDate);
+            document.getElementById('resRounded1').textContent = formatTime(ref1.roundedDate) + ":00";
+            document.getElementById('resTarget1').textContent = formatTime(ref1.sequence[0].targetTime);
+
+            // Ref 2
+            document.getElementById('resOdds2').textContent = `${ref2.odds.toFixed(2)}x`;
+            document.getElementById('resLogged2').textContent = formatTimeWithSecs(ref2.rawDate);
+            document.getElementById('resRounded2').textContent = formatTime(ref2.roundedDate) + ":00";
+            document.getElementById('resTarget2').textContent = formatTime(ref2.sequence[0].targetTime);
+
+            // Show Alert Container
+            const alertCont = document.getElementById('activeAlertContainer');
+            alertCont.classList.remove('hidden');
+        }
+
+        function renderSequence(sequence) {
+            const tbody = document.getElementById('sequenceTableBody');
+            document.getElementById('sequenceBadge').textContent = `${sequence.length} Signals`;
+
+            tbody.innerHTML = sequence.map((item, idx) => {
+                const isRef1 = item.ref === 'REF 1';
+                const tagBadgeClass = isRef1 
+                    ? 'bg-aviatorPink/20 text-aviatorPink border-aviatorPink/30' 
+                    : 'bg-aviatorPurple/20 text-purple-300 border-aviatorPurple/30';
+
+                return `
+                    <tr class="hover:bg-dark/40 transition-colors">
+                        <td class="py-3 px-3">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${tagBadgeClass}">${item.ref} (#${item.step})</span>
+                        </td>
+                        <td class="py-3 px-3 font-digital text-aviatorGreen font-bold text-base">${formatTime(item.targetTime)}</td>
+                        <td class="py-3 px-3 font-digital text-aviatorGold text-xs">${item.windowStartStr} - ${item.windowEndStr}</td>
+                        <td class="py-3 px-3 text-right">
+                            <span id="seqStatus-${idx}" class="text-[11px] bg-dark px-2 py-0.5 rounded border border-cardBorder text-slate-400">
+                                Pending
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = historyLog.map(item => {
+                const isRef1 = item.ref === 'REF 1';
+                const tagClass = isRef1 ? 'text-aviatorPink font-bold' : 'text-purple-400 font-bold';
+
+                return `
+                    <tr class="hover:bg-dark/40 transition-colors">
+                        <td class="py-2.5 px-3 ${tagClass}">${item.ref}</td>
+                        <td class="py-2.5 px-3 text-slate-200 font-bold">${item.odds.toFixed(2)}x</td>
+                        <td class="py-2.5 px-3 text-slate-300">${item.rawTime}</td>
+                        <td class="py-2.5 px-3 text-slate-400 text-[11px]">${item.ruleApplied}</td>
+                        <td class="py-2.5 px-3 text-right font-bold text-aviatorGreen">${item.primaryTarget}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function clearHistory() {
+            historyLog = [];
+            renderHistory();
+        }
+
+        // Live alert monitor checking proximity to target minutes
+        function checkBetAlerts(now) {
+            if (!activeTargets || activeTargets.length === 0) return;
+
+            // Find nearest future or active target
+            const nextTargetItem = activeTargets.find(item => (item.targetTime.getTime() - now.getTime()) > -60000) || activeTargets[0];
+            const primaryTarget = nextTargetItem.targetTime;
+
+            document.getElementById('targetTimeBadge').textContent = `${nextTargetItem.ref} Target: ${formatTime(primaryTarget)}`;
+
+            const diffMs = primaryTarget.getTime() - now.getTime();
+            const diffSecs = Math.floor(diffMs / 1000);
+
+            const displayEl = document.getElementById('countdownDisplay');
+            const alertContainer = document.getElementById('activeAlertContainer');
+            const alertTitle = document.getElementById('alertTitle');
+            const alertInstructions = document.getElementById('alertInstructions');
+
+            if (diffSecs >= 0) {
+                const m = String(Math.floor(diffSecs / 60)).padStart(2, '0');
+                const s = String(diffSecs % 60).padStart(2, '0');
+                displayEl.textContent = `${m}:${s}`;
+            } else {
+                displayEl.textContent = "00:00";
+            }
+
+            // Window Logic: 10 to 20 seconds BEFORE target minute
+            if (diffSecs <= 20 && diffSecs >= 10) {
+                alertContainer.className = "bg-gradient-to-r from-red-900/60 via-cardDark to-aviatorPink/40 border-2 border-aviatorPink rounded-2xl p-5 shadow-xl animate-bet-alert";
+                alertTitle.textContent = `🔥 PLACE YOUR BET FOR ${nextTargetItem.ref}! (10-20s Window)`;
+                alertTitle.className = "text-sm font-extrabold text-aviatorGold uppercase tracking-wide";
+                alertInstructions.textContent = "Strategy trigger active! Get ready for target minute.";
+
+                if (diffSecs === 20 || diffSecs === 15 || diffSecs === 10) {
+                    playBeep(1000, 'square', 0.2);
+                }
+            } else if (diffSecs < 10 && diffSecs > 0) {
+                alertContainer.className = "bg-cardDark border border-aviatorGreen/50 rounded-2xl p-5 shadow-xl";
+                alertTitle.textContent = `⚡ Round Starting Imminently for ${nextTargetItem.ref}!`;
+                alertTitle.className = "text-sm font-bold text-aviatorGreen";
+            } else if (diffSecs <= 0 && diffSecs > -60) {
+                alertContainer.className = "bg-cardDark border border-cardBorder rounded-2xl p-5 shadow-xl";
+                alertTitle.textContent = `${nextTargetItem.ref} Target Minute Active`;
+                alertTitle.className = "text-sm font-bold text-slate-300";
+                alertInstructions.textContent = "Waiting for next cycle...";
+            } else {
+                alertContainer.className = "bg-cardDark border border-cardBorder rounded-2xl p-5 shadow-xl";
+                alertTitle.textContent = "Countdown to Bet Entry Window";
+                alertTitle.className = "text-sm font-bold text-slate-300";
+                alertInstructions.textContent = "Place bets 10 to 20 seconds before signal minute!";
+            }
+
+            // Update row statuses in sequence table
+            activeTargets.forEach((item, idx) => {
+                const el = document.getElementById(`seqStatus-${idx}`);
+                if (!el) return;
+                const dSecs = Math.floor((item.targetTime.getTime() - now.getTime()) / 1000);
+
+                if (dSecs <= 20 && dSecs >= 10) {
+                    el.className = "text-[11px] bg-aviatorPink text-white font-bold px-2 py-0.5 rounded animate-pulse";
+                    el.textContent = "BET NOW!";
+                } else if (dSecs < 10 && dSecs >= -60) {
+                    el.className = "text-[11px] bg-aviatorGreen/20 text-aviatorGreen font-bold px-2 py-0.5 rounded border border-aviatorGreen/30";
+                    el.textContent = "ACTIVE";
+                } else if (dSecs < -60) {
+                    el.className = "text-[11px] bg-dark px-2 py-0.5 rounded border border-cardBorder text-slate-600";
+                    el.textContent = "PASSED";
+                } else {
+                    el.className = "text-[11px] bg-dark px-2 py-0.5 rounded border border-cardBorder text-slate-400";
+                    el.textContent = "PENDING";
+                }
+            });
+        }
+
+        function toggleGuide() {
+            const guide = document.getElementById('strategyGuide');
+            const chevron = document.getElementById('guideChevron');
+            guide.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        // Initialize with default times
+        setCurrentTime(1);
+        setCurrentTime(2);
+    </script>
+</body>
+</html>
+```
